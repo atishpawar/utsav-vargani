@@ -16,6 +16,29 @@ export const api = {
     }
   },
 
+  // Donors API
+  async getDonors() {
+    const res = await fetch(`${API_BASE}/donors`);
+    if (!res.ok) throw new Error('Failed to fetch donors');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async searchDonors(query) {
+    if (!query) return [];
+    const res = await fetch(`${API_BASE}/donors/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error('Failed to search donors');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async getDonorDetails(donorId) {
+    const res = await fetch(`${API_BASE}/donors/${donorId}`);
+    if (!res.ok) throw new Error('Failed to fetch donor details');
+    const json = await res.json();
+    return json.donor;
+  },
+
   // Receipts / Donations API
   async getReceipts() {
     const res = await fetch(`${API_BASE}/receipts`);

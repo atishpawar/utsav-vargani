@@ -14,6 +14,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import NewReceipt from './pages/NewReceipt';
 import Donations from './pages/Donations';
+import Donors from './pages/Donors';
 import Pending from './pages/Pending';
 import Expenses from './pages/Expenses';
 import Income from './pages/Income';
@@ -37,6 +38,8 @@ function MainApp() {
         return <NewReceipt />;
       case 'donations':
         return <Donations />;
+      case 'donors':
+        return <Donors />;
       case 'pending':
         return <Pending />;
       case 'expenses':

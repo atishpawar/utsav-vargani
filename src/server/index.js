@@ -122,7 +122,108 @@ app.get('/api/activity-logs', async (c) => {
 });
 
 // ==========================================
-// 3. RECEIPTS / DONATIONS ENDPOINTS
+// 3. DONORS ENDPOINTS
+// ==========================================
+
+// GET /api/donors - Fetch all donors with aggregate totals
+app.get('/api/donors', async (c) => {
+  try {
+    const db = c.env.DB;
+    const { results: donors } = await db.prepare('SELECT * FROM donors ORDER BY name ASC').all();
+    
+    const donorList = await Promise.all(donors.map(async (d) => {
+      const stats = await db.prepare(`
+        SELECT 
+          SUM(CASE WHEN status = 'Paid' THEN amount ELSE 0 END) as total_contributed,
+          SUM(CASE WHEN status = 'Pending' THEN amount ELSE 0 END) as pending_amount,
+          COUNT(*) as total_receipts,
+          MAX(date) as last_donation_date
+        FROM receipts WHERE donor_id = ? OR mobile = ?
+      `).bind(d.id, d.mobile).first();
+
+      return {
+        id: d.id,
+        name: d.name,
+        mobile: d.mobile,
+        email: d.email || '',
+        address: d.address || '',
+        totalContributed: stats?.total_contributed || 0,
+        pendingAmount: stats?.pending_amount || 0,
+        totalReceipts: stats?.total_receipts || 0,
+        lastDonationDate: stats?.last_donation_date || (d.created_at ? d.created_at.split(' ')[0] : ''),
+      };
+    }));
+
+    return c.json({ success: true, data: donorList });
+  } catch (err) {
+    console.error('Error fetching donors:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// GET /api/donors/search - Auto-suggestion search for donors by name or mobile
+app.get('/api/donors/search', async (c) => {
+  try {
+    const db = c.env.DB;
+    const q = (c.req.query('q') || '').trim();
+    if (!q) return c.json({ success: true, data: [] });
+
+    const searchPattern = `%${q}%`;
+    const { results } = await db.prepare(
+      'SELECT id, name, mobile, email, address FROM donors WHERE name LIKE ? OR mobile LIKE ? LIMIT 10'
+    ).bind(searchPattern, searchPattern).all();
+
+    return c.json({ success: true, data: results });
+  } catch (err) {
+    console.error('Error searching donors:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// GET /api/donors/:id - Fetch single donor with past donation history
+app.get('/api/donors/:id', async (c) => {
+  try {
+    const db = c.env.DB;
+    const id = c.req.param('id');
+    const donor = await db.prepare('SELECT * FROM donors WHERE id = ?').bind(id).first();
+    if (!donor) return c.json({ success: false, error: 'Donor not found' }, 404);
+
+    const { results: receipts } = await db.prepare(
+      'SELECT * FROM receipts WHERE donor_id = ? OR mobile = ? ORDER BY date DESC'
+    ).bind(donor.id, donor.mobile).all();
+
+    const formattedReceipts = receipts.map(r => ({
+      id: r.id,
+      receiptNo: r.receipt_no,
+      date: r.date,
+      name: r.name,
+      mobile: r.mobile,
+      amount: Number(r.amount),
+      paymentMethod: r.payment_method,
+      status: r.status,
+      receiver: r.receiver,
+      notes: r.notes || '',
+    }));
+
+    return c.json({
+      success: true,
+      donor: {
+        id: donor.id,
+        name: donor.name,
+        mobile: donor.mobile,
+        email: donor.email || '',
+        address: donor.address || '',
+        receipts: formattedReceipts,
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching donor details:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// ==========================================
+// 4. RECEIPTS / DONATIONS ENDPOINTS
 // ==========================================
 
 // GET /api/receipts - Fetch all receipts
@@ -134,6 +235,7 @@ app.get('/api/receipts', async (c) => {
     const receipts = results.map(r => ({
       id: r.id,
       receiptNo: r.receipt_no,
+      donorId: r.donor_id,
       date: r.date,
       name: r.name,
       mobile: r.mobile,
@@ -155,7 +257,7 @@ app.get('/api/receipts', async (c) => {
   }
 });
 
-// POST /api/receipts - Create new receipt
+// POST /api/receipts - Create new receipt & auto-link/create donor
 app.post('/api/receipts', async (c) => {
   try {
     const db = c.env.DB;
@@ -172,13 +274,39 @@ app.post('/api/receipts', async (c) => {
     const date = body.date || new Date().toISOString().split('T')[0];
     const status = body.status || 'Paid';
 
+    // Auto-create or link Donor record
+    let donorId = body.donorId || null;
+    if (body.mobile && body.mobile.trim()) {
+      const cleanMobile = body.mobile.trim();
+      const cleanName = body.name ? body.name.trim() : 'Donor';
+      const cleanEmail = body.email ? body.email.trim() : '';
+      const cleanAddress = body.address ? body.address.trim() : '';
+
+      const existingDonor = await db.prepare('SELECT id FROM donors WHERE mobile = ?').bind(cleanMobile).first();
+      if (existingDonor) {
+        donorId = existingDonor.id;
+        await db.prepare(`
+          UPDATE donors 
+          SET name = ?, 
+              email = CASE WHEN ? != '' THEN ? ELSE email END,
+              address = CASE WHEN ? != '' THEN ? ELSE address END
+          WHERE id = ?
+        `).bind(cleanName, cleanEmail, cleanEmail, cleanAddress, cleanAddress, donorId).run();
+      } else {
+        const insertRes = await db.prepare('INSERT INTO donors (name, mobile, email, address) VALUES (?, ?, ?, ?)')
+          .bind(cleanName, cleanMobile, cleanEmail, cleanAddress).run();
+        donorId = insertRes.meta?.last_row_id || null;
+      }
+    }
+
     await db.prepare(`
       INSERT INTO receipts (
-        id, receipt_no, date, name, mobile, email, address, amount, payment_method, status, expected_payment_date, expected_payment_option, receiver, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, receipt_no, donor_id, date, name, mobile, email, address, amount, payment_method, status, expected_payment_date, expected_payment_option, receiver, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       receiptNo,
+      donorId,
       date,
       body.name,
       body.mobile || '',
@@ -196,6 +324,7 @@ app.post('/api/receipts', async (c) => {
     const newReceipt = {
       id,
       receiptNo,
+      donorId,
       date,
       name: body.name,
       mobile: body.mobile || '',
@@ -214,7 +343,7 @@ app.post('/api/receipts', async (c) => {
       db,
       body.receiver || 'Admin',
       'Add Receipt',
-      `Created Receipt ${receiptNo} for ${body.name} (₹${body.amount} - ${body.paymentMethod})`
+      `Created Receipt ${receiptNo} for Donor ${body.name} (${body.mobile}) - ₹${body.amount}`
     );
 
     return c.json({ success: true, data: newReceipt }, 201);

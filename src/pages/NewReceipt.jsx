@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { numberToWordsIndian } from '../data/utils';
+import { api } from '../api/client';
 import {
   Flame,
   Save,
@@ -23,6 +24,7 @@ export default function NewReceipt() {
 
   const [formData, setFormData] = useState({
     receiptNo: autoReceiptNo,
+    donorId: null,
     date: new Date().toISOString().split('T')[0],
     name: '',
     mobile: '',
@@ -41,6 +43,48 @@ export default function NewReceipt() {
   const [showAddReceiverInput, setShowAddReceiverInput] = useState(false);
   const [newReceiverName, setNewReceiverName] = useState('');
   const [errors, setErrors] = useState({});
+  const [donorSuggestions, setDonorSuggestions] = useState([]);
+
+  // Fast donor lookup auto-suggest
+  const handleDonorSearch = async (query) => {
+    const q = (query || '').trim();
+    if (q.length < 2) {
+      setDonorSuggestions([]);
+      return;
+    }
+    try {
+      const results = await api.searchDonors(q);
+      setDonorSuggestions(results || []);
+    } catch {
+      // Fallback local search from receipts
+      const matches = receipts.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q.toLowerCase()) ||
+          (r.mobile && r.mobile.includes(q))
+      );
+      const unique = [];
+      const seen = new Set();
+      matches.forEach((m) => {
+        if (!seen.has(m.mobile || m.name)) {
+          seen.add(m.mobile || m.name);
+          unique.push(m);
+        }
+      });
+      setDonorSuggestions(unique.slice(0, 5));
+    }
+  };
+
+  const selectDonorSuggestion = (donor) => {
+    setFormData((prev) => ({
+      ...prev,
+      donorId: donor.id || null,
+      name: donor.name || prev.name,
+      mobile: donor.mobile || prev.mobile,
+      email: donor.email || prev.email,
+      address: donor.address || prev.address,
+    }));
+    setDonorSuggestions([]);
+  };
 
   // Auto generate amount in words whenever amount changes
   useEffect(() => {
@@ -195,23 +239,58 @@ export default function NewReceipt() {
               <span>Donor Information</span>
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative">
+              
+              {/* Donor Name with Auto-Suggest */}
+              <div className="relative">
                 <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
                   Full Name *
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Rahul Patil"
+                  placeholder="e.g. Rahul Patil (Start typing to search existing donors...)"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, name: val });
+                    handleDonorSearch(val);
+                  }}
+                  onFocus={() => {
+                    if (formData.name.trim().length >= 2) handleDonorSearch(formData.name);
+                  }}
                   className={`w-full px-3.5 py-2.5 bg-white border ${
                     errors.name ? 'border-rose-500' : 'border-stone-300'
                   } rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-semibold`}
                 />
                 {errors.name && <span className="text-xs text-rose-600 mt-1 block">{errors.name}</span>}
+
+                {/* Auto-Suggestion Dropdown */}
+                {donorSuggestions.length > 0 && (
+                  <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-white border border-amber-300 rounded-2xl shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100">
+                    <div className="px-3 py-1.5 bg-amber-50 text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                      Matching Donors Found (Click to Auto-fill)
+                    </div>
+                    {donorSuggestions.map((d) => (
+                      <button
+                        key={d.id || d.mobile}
+                        type="button"
+                        onClick={() => selectDonorSuggestion(d)}
+                        className="w-full px-3.5 py-2.5 text-left hover:bg-amber-100/70 transition-colors flex items-center justify-between"
+                      >
+                        <div>
+                          <span className="block text-xs font-bold text-stone-900">{d.name}</span>
+                          <span className="block text-[10px] text-stone-500">{d.address || 'Pune'}</span>
+                        </div>
+                        <span className="text-xs font-mono font-semibold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                          {d.mobile}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
+              {/* Mobile Number */}
               <div>
                 <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
                   Mobile Number *
@@ -221,7 +300,11 @@ export default function NewReceipt() {
                   placeholder="e.g. 9876543210"
                   maxLength={10}
                   value={formData.mobile}
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '') })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setFormData({ ...formData, mobile: val });
+                    if (val.length >= 3) handleDonorSearch(val);
+                  }}
                   className={`w-full px-3.5 py-2.5 bg-white border ${
                     errors.mobile ? 'border-rose-500' : 'border-stone-300'
                   } rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono`}
