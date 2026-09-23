@@ -1,0 +1,13 @@
+name = "utsav-vargani"
+main = "src/server/index.js"
+compatibility_date = "2024-09-23"
+
+# Static assets configuration for Cloudflare Workers
+assets = { directory = "./dist", binding = "ASSETS" }
+
+# Cloudflare D1 Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "utsav-vargani-db"
+database_id = "ca05b47e-f4c6-46a4-86f6-99130e92140f"
+migrations_dir = "migrations"
