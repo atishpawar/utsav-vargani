@@ -17,8 +17,8 @@ export const INITIAL_SETTINGS = {
   upiId: 'utsav.vargani@upi',
   receiptPrefix: 'VR-',
   startingReceiptNo: 1001,
-  defaultReceiver: 'Amit',
-  receivers: ['Amit', 'Rahul', 'Sagar', 'Pratik', 'Admin'],
+  defaultReceiver: '',
+  receivers: [],
   qrImage: '/assets/qr-code.png',
   theme: 'light',
 };

@@ -101,6 +101,34 @@ export const api = {
     return json.data;
   },
 
+  // Receivers API (Separate Table)
+  async getReceivers() {
+    const res = await fetch(`${API_BASE}/receivers`);
+    if (!res.ok) throw new Error('Failed to fetch receivers');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async addReceiver(name) {
+    const res = await fetch(`${API_BASE}/receivers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new Error('Failed to add receiver');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async deleteReceiver(name) {
+    const res = await fetch(`${API_BASE}/receivers/${encodeURIComponent(name)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete receiver');
+    const json = await res.json();
+    return json.data;
+  },
+
   // Stats API
   async getStats() {
     const res = await fetch(`${API_BASE}/stats`);

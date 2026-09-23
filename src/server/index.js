@@ -359,7 +359,67 @@ app.delete('/api/expenses/:id', async (c) => {
 });
 
 // ==========================================
-// 5. SETTINGS ENDPOINTS
+// 5. RECEIVERS ENDPOINTS (SEPARATE TABLE)
+// ==========================================
+
+// GET /api/receivers - Fetch all receivers from receivers table
+app.get('/api/receivers', async (c) => {
+  try {
+    const db = c.env.DB;
+    const { results } = await db.prepare('SELECT name FROM receivers ORDER BY name ASC').all();
+    const receivers = results.map(r => r.name);
+    return c.json({ success: true, data: receivers });
+  } catch (err) {
+    console.error('Error fetching receivers:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// POST /api/receivers - Add new receiver name
+app.post('/api/receivers', async (c) => {
+  try {
+    const db = c.env.DB;
+    const body = await c.req.json();
+    const name = (body.name || '').trim();
+
+    if (!name) {
+      return c.json({ success: false, error: 'Receiver name is required' }, 400);
+    }
+
+    await db.prepare('INSERT OR IGNORE INTO receivers (name) VALUES (?)').bind(name).run();
+    await logActivity(db, body.userName || 'Admin', 'Add Receiver', `Added receiver "${name}"`);
+
+    const { results } = await db.prepare('SELECT name FROM receivers ORDER BY name ASC').all();
+    const receivers = results.map(r => r.name);
+
+    return c.json({ success: true, data: receivers }, 201);
+  } catch (err) {
+    console.error('Error adding receiver:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// DELETE /api/receivers/:name - Remove receiver
+app.delete('/api/receivers/:name', async (c) => {
+  try {
+    const db = c.env.DB;
+    const name = decodeURIComponent(c.req.param('name'));
+
+    await db.prepare('DELETE FROM receivers WHERE name = ?').bind(name).run();
+    await logActivity(db, 'Admin', 'Delete Receiver', `Removed receiver "${name}"`);
+
+    const { results } = await db.prepare('SELECT name FROM receivers ORDER BY name ASC').all();
+    const receivers = results.map(r => r.name);
+
+    return c.json({ success: true, data: receivers });
+  } catch (err) {
+    console.error('Error deleting receiver:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// ==========================================
+// 6. SETTINGS ENDPOINTS
 // ==========================================
 
 // GET /api/settings - Fetch settings
@@ -370,18 +430,16 @@ app.get('/api/settings', async (c) => {
 
     const settingsObj = {};
     for (const row of results) {
-      if (row.key === 'receivers') {
-        try {
-          settingsObj[row.key] = JSON.parse(row.value);
-        } catch {
-          settingsObj[row.key] = ['Amit', 'Rahul', 'Sagar', 'Pratik', 'Admin'];
-        }
-      } else if (row.key === 'startingReceiptNo') {
+      if (row.key === 'startingReceiptNo') {
         settingsObj[row.key] = Number(row.value);
       } else {
         settingsObj[row.key] = row.value;
       }
     }
+
+    // Load receivers list from separate receivers table
+    const recRes = await db.prepare('SELECT name FROM receivers ORDER BY name ASC').all();
+    settingsObj.receivers = recRes.results ? recRes.results.map(r => r.name) : [];
 
     return c.json({ success: true, data: settingsObj });
   } catch (err) {
@@ -397,11 +455,12 @@ app.put('/api/settings', async (c) => {
     const newSettings = await c.req.json();
 
     for (const [key, val] of Object.entries(newSettings)) {
+      if (key === 'receivers') continue; // Receivers handled via separate table
       const stringValue = typeof val === 'object' ? JSON.stringify(val) : String(val);
       await db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').bind(key, stringValue).run();
     }
 
-    await logActivity(db, 'Admin', 'Update Settings', 'Updated system settings & receivers');
+    await logActivity(db, 'Admin', 'Update Settings', 'Updated system settings');
 
     return c.json({ success: true, data: newSettings });
   } catch (err) {

@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings as SettingsIcon, Save, QrCode, Building, Receipt, Sun, Moon, Check } from 'lucide-react';
+import { Settings as SettingsIcon, Save, QrCode, Building, Receipt, UserCheck, Plus, Trash2 } from 'lucide-react';
 
 export default function Settings() {
-  const { settings, setSettings, addToast } = useApp();
+  const { settings, setSettings, addReceiver, deleteReceiver, addToast } = useApp();
 
   const [formData, setFormData] = useState({ ...settings });
-  const [activeTab, setActiveTab] = useState('general');
+  const [newReceiverName, setNewReceiverName] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setSettings(formData);
     addToast('Festival settings saved successfully!');
+  };
+
+  const handleAddReceiverSubmit = (e) => {
+    e.preventDefault();
+    if (!newReceiverName.trim()) return;
+    addReceiver(newReceiverName.trim());
+    setNewReceiverName('');
   };
 
   const handleQrUpload = (e) => {
@@ -26,6 +33,8 @@ export default function Settings() {
     }
   };
 
+  const currentReceivers = settings.receivers || [];
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in pb-12">
       
@@ -37,7 +46,7 @@ export default function Settings() {
             <span>Settings & Preferences</span>
           </h1>
           <p className="text-xs text-stone-500">
-            Configure Mandal identity, receipt numbering, UPI QR code, and defaults
+            Configure Mandal identity, receipt numbering, receivers list, and UPI QR code
           </p>
         </div>
 
@@ -50,24 +59,23 @@ export default function Settings() {
         </button>
       </div>
 
-      {/* Main Settings Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-amber-200/80 shadow-xs p-6 sm:p-8 space-y-8">
+      <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-8 rounded-3xl border border-amber-200/80 shadow-xs space-y-8">
         
-        {/* Section 1: Festival & Organization Details */}
+        {/* Section 1: Organization & Festival Info */}
         <div>
           <h3 className="text-xs font-black uppercase tracking-wider text-rose-950 mb-4 pb-2 border-b border-amber-200 flex items-center space-x-2">
             <Building className="w-4 h-4 text-amber-600" />
-            <span>Festival & Organization Details</span>
+            <span>Mandal & Festival Information</span>
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                Organization Name
+                Organization / Mandal Name
               </label>
               <input
                 type="text"
-                value={formData.orgName}
+                value={formData.orgName || ''}
                 onChange={(e) => setFormData({ ...formData, orgName: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
@@ -75,11 +83,11 @@ export default function Settings() {
 
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                Festival Name & Season
+                Festival Main Title
               </label>
               <input
                 type="text"
-                value={formData.festivalName}
+                value={formData.festivalName || ''}
                 onChange={(e) => setFormData({ ...formData, festivalName: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
@@ -87,35 +95,35 @@ export default function Settings() {
 
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                Marathi Subtitle Accent
+                Festival Subtitle (Marathi / English)
               </label>
               <input
                 type="text"
-                value={formData.festivalSubtitle}
+                value={formData.festivalSubtitle || ''}
                 onChange={(e) => setFormData({ ...formData, festivalSubtitle: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                Official UPI ID (for QR Code)
+                Festival Year
               </label>
               <input
                 type="text"
-                value={formData.upiId}
-                onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-bold font-mono text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                value={formData.year || ''}
+                onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                Contact Phone Number
+                Official Contact Phone Number
               </label>
               <input
                 type="text"
-                value={formData.contactNumber}
+                value={formData.contactNumber || ''}
                 onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
@@ -127,7 +135,7 @@ export default function Settings() {
               </label>
               <input
                 type="email"
-                value={formData.email}
+                value={formData.email || ''}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
@@ -139,7 +147,7 @@ export default function Settings() {
               </label>
               <input
                 type="text"
-                value={formData.address}
+                value={formData.address || ''}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
@@ -147,7 +155,72 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Section 2: Receipt Settings */}
+        {/* Section 2: Authorized Receivers (Separate Table) */}
+        <div>
+          <h3 className="text-xs font-black uppercase tracking-wider text-rose-950 mb-4 pb-2 border-b border-amber-200 flex items-center space-x-2">
+            <UserCheck className="w-4 h-4 text-amber-600" />
+            <span>Authorized Receivers (Separate Database Table)</span>
+          </h3>
+
+          <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-200 space-y-4">
+            <p className="text-xs text-stone-600">
+              Add authorized volunteer or admin names who accept cash/online vargani donations.
+            </p>
+
+            {/* Add New Receiver Input */}
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                placeholder="Enter new receiver name..."
+                value={newReceiverName}
+                onChange={(e) => setNewReceiverName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddReceiverSubmit(e);
+                  }
+                }}
+                className="flex-1 px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddReceiverSubmit}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center space-x-1"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Receiver</span>
+              </button>
+            </div>
+
+            {/* Receiver List Chips */}
+            {currentReceivers.length === 0 ? (
+              <p className="text-xs italic text-stone-400 py-2">
+                No receivers added yet. Add receiver names above to populate donation form dropdowns.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {currentReceivers.map((rec) => (
+                  <div
+                    key={rec}
+                    className="flex items-center space-x-2 px-3 py-1.5 bg-white border border-amber-300 rounded-xl text-xs font-bold text-stone-800 shadow-2xs"
+                  >
+                    <span>{rec}</span>
+                    <button
+                      type="button"
+                      onClick={() => deleteReceiver(rec)}
+                      className="text-stone-400 hover:text-rose-600 transition-colors"
+                      title="Remove Receiver"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Section 3: Receipt Settings */}
         <div>
           <h3 className="text-xs font-black uppercase tracking-wider text-rose-950 mb-4 pb-2 border-b border-amber-200 flex items-center space-x-2">
             <Receipt className="w-4 h-4 text-amber-600" />
@@ -161,7 +234,7 @@ export default function Settings() {
               </label>
               <input
                 type="text"
-                value={formData.receiptPrefix}
+                value={formData.receiptPrefix || ''}
                 onChange={(e) => setFormData({ ...formData, receiptPrefix: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
@@ -173,7 +246,7 @@ export default function Settings() {
               </label>
               <input
                 type="number"
-                value={formData.startingReceiptNo}
+                value={formData.startingReceiptNo || 1001}
                 onChange={(e) => setFormData({ ...formData, startingReceiptNo: Number(e.target.value) })}
                 className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
@@ -184,11 +257,12 @@ export default function Settings() {
                 Default Authorized Receiver
               </label>
               <select
-                value={formData.defaultReceiver}
+                value={formData.defaultReceiver || ''}
                 onChange={(e) => setFormData({ ...formData, defaultReceiver: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
-                {formData.receivers.map((r) => (
+                <option value="">-- Select Default Receiver --</option>
+                {currentReceivers.map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
@@ -198,7 +272,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Section 3: QR Code Image Replacement */}
+        {/* Section 4: QR Code Image Replacement */}
         <div>
           <h3 className="text-xs font-black uppercase tracking-wider text-rose-950 mb-4 pb-2 border-b border-amber-200 flex items-center space-x-2">
             <QrCode className="w-4 h-4 text-amber-600" />

@@ -63,11 +63,12 @@ export function AppProvider({ children }) {
     let isMounted = true;
     async function syncFromBackend() {
       try {
-        const [remoteReceipts, remoteExpenses, remoteSettings, remoteLogs] = await Promise.all([
+        const [remoteReceipts, remoteExpenses, remoteSettings, remoteLogs, remoteReceivers] = await Promise.all([
           api.getReceipts().catch(() => null),
           api.getExpenses().catch(() => null),
           api.getSettings().catch(() => null),
           api.getActivityLogs().catch(() => null),
+          api.getReceivers().catch(() => null),
         ]);
 
         if (isMounted) {
@@ -78,7 +79,13 @@ export function AppProvider({ children }) {
             setExpenses(remoteExpenses);
           }
           if (remoteSettings && Object.keys(remoteSettings).length > 0) {
-            setSettings((prev) => ({ ...prev, ...remoteSettings }));
+            setSettings((prev) => ({
+              ...prev,
+              ...remoteSettings,
+              receivers: Array.isArray(remoteReceivers) ? remoteReceivers : (remoteSettings.receivers || []),
+            }));
+          } else if (Array.isArray(remoteReceivers)) {
+            setSettings((prev) => ({ ...prev, receivers: remoteReceivers }));
           }
           if (remoteLogs && Array.isArray(remoteLogs)) {
             setActivityLogs(remoteLogs);
@@ -289,20 +296,41 @@ export function AppProvider({ children }) {
     });
   };
 
-  // Add receiver dynamically
+  // Add receiver dynamically to D1 receivers table
   const addReceiver = async (newReceiverName) => {
-    if (!newReceiverName.trim()) return;
-    if (!settings.receivers.includes(newReceiverName.trim())) {
-      const updated = [...settings.receivers, newReceiverName.trim()];
-      const updatedSettings = { ...settings, receivers: updated };
-      setSettings(updatedSettings);
-      addToast(`Receiver "${newReceiverName}" added!`);
+    const clean = newReceiverName.trim();
+    if (!clean) return;
+    if (!settings.receivers.includes(clean)) {
+      const updated = [...settings.receivers, clean];
+      setSettings((prev) => ({ ...prev, receivers: updated }));
+      addToast(`Receiver "${clean}" added!`);
       try {
-        await api.updateSettings({ receivers: updated });
+        const latestReceivers = await api.addReceiver(clean);
+        if (Array.isArray(latestReceivers)) {
+          setSettings((prev) => ({ ...prev, receivers: latestReceivers }));
+        }
         refreshActivityLogs();
       } catch (err) {
-        console.warn('API sync error updating receivers:', err);
+        console.warn('API sync error adding receiver:', err);
       }
+    }
+  };
+
+  // Delete receiver from D1 receivers table
+  const deleteReceiver = async (receiverName) => {
+    const clean = receiverName.trim();
+    if (!clean) return;
+    const updated = settings.receivers.filter((r) => r !== clean);
+    setSettings((prev) => ({ ...prev, receivers: updated }));
+    addToast(`Receiver "${clean}" removed.`, 'info');
+    try {
+      const latestReceivers = await api.deleteReceiver(clean);
+      if (Array.isArray(latestReceivers)) {
+        setSettings((prev) => ({ ...prev, receivers: latestReceivers }));
+      }
+      refreshActivityLogs();
+    } catch (err) {
+      console.warn('API sync error deleting receiver:', err);
     }
   };
 
@@ -353,6 +381,7 @@ export function AppProvider({ children }) {
         addExpense,
         deleteExpense,
         addReceiver,
+        deleteReceiver,
         toasts,
         addToast,
         removeToast,
