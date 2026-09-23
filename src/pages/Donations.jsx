@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { formatINR, formatDate } from '../data/utils';
+import BulkImportModal from '../components/BulkImportModal';
 import {
   Search,
   Plus,
   Download,
+  Upload,
   Filter,
   Eye,
   CheckCircle,
@@ -22,10 +24,26 @@ export default function Donations() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [paymentFilter, setPaymentFilter] = useState('All');
   const [receiverFilter, setReceiverFilter] = useState('All');
+  const [yearFilter, setYearFilter] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   const itemsPerPage = 8;
+
+  // Extract all unique years from receipts for the filter dropdown
+  const availableYears = Array.from(
+    new Set(
+      receipts
+        .map((r) => r.date ? r.date.split('-')[0] : null)
+        .filter(Boolean)
+    )
+  ).sort((a, b) => b - a);
+
+  // Default past years if empty
+  if (availableYears.length === 0) {
+    availableYears.push('2026', '2025', '2024');
+  }
 
   // Filter receipts logic
   const filteredReceipts = receipts.filter((item) => {
@@ -37,8 +55,9 @@ export default function Donations() {
     const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
     const matchesPayment = paymentFilter === 'All' || item.paymentMethod === paymentFilter;
     const matchesReceiver = receiverFilter === 'All' || item.receiver === receiverFilter;
+    const matchesYear = yearFilter === 'All' || (item.date && item.date.startsWith(yearFilter));
 
-    return matchesSearch && matchesStatus && matchesPayment && matchesReceiver;
+    return matchesSearch && matchesStatus && matchesPayment && matchesReceiver && matchesYear;
   });
 
   // Pagination calculations
@@ -72,7 +91,7 @@ export default function Donations() {
         <div>
           <h1 className="text-xl font-black text-stone-900 tracking-tight">Donation Records</h1>
           <p className="text-xs text-stone-500">
-            Total {filteredReceipts.length} collections recorded for {settings.festivalName}
+            Total {filteredReceipts.length} collections recorded {yearFilter !== 'All' ? `for year ${yearFilter}` : `for ${settings.festivalName}`}
           </p>
         </div>
 
@@ -80,13 +99,21 @@ export default function Donations() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors flex items-center space-x-1.5 ${
-              showFilters || statusFilter !== 'All' || paymentFilter !== 'All'
+              showFilters || statusFilter !== 'All' || paymentFilter !== 'All' || yearFilter !== 'All'
                 ? 'bg-amber-100 text-amber-900 border-amber-300'
                 : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
             <span>Filters</span>
+          </button>
+
+          <button
+            onClick={() => setShowBulkImport(true)}
+            className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold border border-amber-300 transition-colors flex items-center space-x-1.5"
+          >
+            <Upload className="w-3.5 h-3.5 text-amber-700" />
+            <span>Import Past CSV</span>
           </button>
 
           <button
@@ -106,6 +133,12 @@ export default function Donations() {
           </button>
         </div>
       </div>
+
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+      />
 
       {/* Search & Filter Bar */}
       <div className="bg-white p-4 rounded-3xl border border-amber-200/80 shadow-xs space-y-4">
@@ -133,7 +166,25 @@ export default function Donations() {
 
         {/* Collapsible Extended Filters */}
         {showFilters && (
-          <div className="pt-3 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fade-in">
+          <div className="pt-3 border-t border-stone-100 grid grid-cols-1 sm:grid-cols-4 gap-3 animate-fade-in">
+            <div>
+              <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">
+                Festival Year
+              </label>
+              <select
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+                className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold"
+              >
+                <option value="All">All Years</option>
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>
+                    Year {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div>
               <label className="block text-[10px] font-bold text-stone-500 uppercase mb-1">
                 Status Filter

@@ -91,9 +91,9 @@ export function formatDate(dateString) {
 }
 
 // Year-Wise Receipt Number Generator
-export function generateNextReceiptNo(receipts = [], settings = {}) {
-  const currentYear = settings.year || new Date().getFullYear().toString();
-  const prefix = settings.receiptPrefix || `VR-${currentYear}-`;
+export function generateNextReceiptNo(receipts = [], settings = {}, targetYear = null) {
+  const selectedYear = targetYear || settings.year || new Date().getFullYear().toString();
+  const prefix = settings.receiptPrefix ? settings.receiptPrefix.replace(/\d{4}/, selectedYear) : `VR-${selectedYear}-`;
   const startNo = Number(settings.startingReceiptNo) || 1001;
 
   // Count receipts created for the target festival year or prefix
@@ -101,8 +101,8 @@ export function generateNextReceiptNo(receipts = [], settings = {}) {
     if (!r.receiptNo) return false;
     return (
       r.receiptNo.startsWith(prefix) ||
-      (r.date && r.date.startsWith(currentYear)) ||
-      r.receiptNo.includes(currentYear)
+      (r.date && r.date.startsWith(selectedYear)) ||
+      r.receiptNo.includes(selectedYear)
     );
   });
 

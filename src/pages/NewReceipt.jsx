@@ -18,8 +18,11 @@ import {
 export default function NewReceipt() {
   const { addReceipt, settings, receipts, addReceiver, setPreviewReceipt } = useApp();
 
+  const currentAppYear = settings.year || new Date().getFullYear().toString();
+  const [selectedYear, setSelectedYear] = useState(currentAppYear);
+
   // Year-wise next receipt number calculation
-  const autoReceiptNo = generateNextReceiptNo(receipts, settings);
+  const autoReceiptNo = generateNextReceiptNo(receipts, settings, selectedYear);
 
   const [formData, setFormData] = useState({
     receiptNo: autoReceiptNo,
@@ -43,6 +46,26 @@ export default function NewReceipt() {
   const [newReceiverName, setNewReceiverName] = useState('');
   const [errors, setErrors] = useState({});
   const [donorSuggestions, setDonorSuggestions] = useState([]);
+
+  // Handle year selection change
+  const handleYearChange = (newYear) => {
+    setSelectedYear(newYear);
+    const newAutoNo = generateNextReceiptNo(receipts, settings, newYear);
+    
+    // Adjust date to the target year
+    let newDate = formData.date;
+    if (newYear !== currentAppYear) {
+      newDate = `${newYear}-09-15`; // Default festival date for past year
+    } else {
+      newDate = new Date().toISOString().split('T')[0];
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      receiptNo: newAutoNo,
+      date: newDate,
+    }));
+  };
 
   // Fast donor lookup auto-suggest
   const handleDonorSearch = async (query) => {
@@ -219,12 +242,42 @@ export default function NewReceipt() {
           </p>
 
           <div className="mt-4 pt-4 border-t border-white/20 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/20 font-bold font-mono">
-              Receipt No: {formData.receiptNo}
+            {/* Festival Year Selection Dropdown */}
+            <div className="flex items-center space-x-2 bg-black/20 px-3 py-1.5 rounded-xl border border-white/30">
+              <span className="font-bold text-amber-300 uppercase tracking-wider text-[10px]">Festival Year:</span>
+              <select
+                value={selectedYear}
+                onChange={(e) => handleYearChange(e.target.value)}
+                className="bg-transparent text-white font-black text-xs border-none focus:outline-none cursor-pointer"
+              >
+                <option value="2026" className="text-stone-900">2026 (Current)</option>
+                <option value="2025" className="text-stone-900">2025 (Past Year)</option>
+                <option value="2024" className="text-stone-900">2024 (Past Year)</option>
+                <option value="2023" className="text-stone-900">2023 (Past Year)</option>
+                <option value="2022" className="text-stone-900">2022 (Past Year)</option>
+              </select>
             </div>
-            <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/20 font-semibold flex items-center space-x-1.5">
-              <Calendar className="w-4 h-4 text-amber-300" />
-              <span>Date: {formData.date}</span>
+
+            {/* Editable Receipt No */}
+            <div className="flex items-center space-x-1.5 bg-white/10 px-3 py-1 rounded-xl border border-white/20 font-bold font-mono">
+              <span className="text-[10px] text-amber-200 uppercase">Receipt No:</span>
+              <input
+                type="text"
+                value={formData.receiptNo}
+                onChange={(e) => setFormData({ ...formData, receiptNo: e.target.value })}
+                className="bg-transparent text-white font-mono font-bold text-xs w-28 focus:bg-white/20 px-1 rounded border border-transparent focus:border-amber-300 outline-none"
+              />
+            </div>
+
+            {/* Editable Receipt Date */}
+            <div className="flex items-center space-x-1.5 bg-white/10 px-3 py-1 rounded-xl border border-white/20 font-semibold">
+              <Calendar className="w-3.5 h-3.5 text-amber-300" />
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="bg-transparent text-white text-xs font-semibold focus:bg-white/20 px-1 rounded border border-transparent focus:border-amber-300 outline-none"
+              />
             </div>
           </div>
         </div>

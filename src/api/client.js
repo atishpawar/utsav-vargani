@@ -58,6 +58,17 @@ export const api = {
     return json.data;
   },
 
+  async bulkImportReceipts(receiptsArray) {
+    const res = await fetch(`${API_BASE}/receipts/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ receipts: receiptsArray }),
+    });
+    if (!res.ok) throw new Error('Failed to bulk import receipts');
+    const json = await res.json();
+    return json;
+  },
+
   async markAsPaid(receiptId) {
     const res = await fetch(`${API_BASE}/receipts/${receiptId}/pay`, {
       method: 'PUT',

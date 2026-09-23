@@ -353,6 +353,71 @@ app.post('/api/receipts', async (c) => {
   }
 });
 
+// POST /api/receipts/bulk - Import past year donation records in bulk
+app.post('/api/receipts/bulk', async (c) => {
+  try {
+    const db = c.env.DB;
+    const { receipts: importItems } = await c.req.json();
+
+    if (!Array.isArray(importItems) || importItems.length === 0) {
+      return c.json({ success: false, error: 'Array of receipt items required' }, 400);
+    }
+
+    let successCount = 0;
+    for (const item of importItems) {
+      if (!item.name || !item.amount) continue;
+
+      const date = item.date || new Date().toISOString().split('T')[0];
+      const year = date.split('-')[0] || '2025';
+      const receiptNo = item.receiptNo || `VR-${year}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+      const id = receiptNo;
+      const status = item.status || 'Paid';
+
+      let donorId = null;
+      if (item.mobile && String(item.mobile).trim()) {
+        const cleanMobile = String(item.mobile).trim();
+        const existingDonor = await db.prepare('SELECT id FROM donors WHERE mobile = ?').bind(cleanMobile).first();
+        if (existingDonor) {
+          donorId = existingDonor.id;
+        } else {
+          const insertRes = await db.prepare('INSERT INTO donors (name, mobile, email, address) VALUES (?, ?, ?, ?)')
+            .bind(String(item.name).trim(), cleanMobile, item.email || '', item.address || '').run();
+          donorId = insertRes.meta?.last_row_id || null;
+        }
+      }
+
+      await db.prepare(`
+        INSERT OR REPLACE INTO receipts (
+          id, receipt_no, donor_id, date, name, mobile, email, address, amount, payment_method, status, receiver, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        id,
+        receiptNo,
+        donorId,
+        date,
+        String(item.name).trim(),
+        item.mobile || '',
+        item.email || '',
+        item.address || '',
+        Number(item.amount),
+        item.paymentMethod || 'Cash',
+        status,
+        item.receiver || 'Admin',
+        item.notes || 'Past Year Import'
+      ).run();
+
+      successCount++;
+    }
+
+    await logActivity(db, 'Admin', 'Bulk Import', `Imported ${successCount} past year receipt records`);
+
+    return c.json({ success: true, count: successCount, message: `Successfully imported ${successCount} records!` });
+  } catch (err) {
+    console.error('Error in bulk import:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
 // PUT /api/receipts/:id/pay - Mark receipt as Paid
 app.put('/api/receipts/:id/pay', async (c) => {
   try {
