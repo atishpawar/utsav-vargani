@@ -82,6 +82,34 @@ export const api = {
     return json;
   },
 
+  // Other Income API (Banners, Prizes, Sponsors, Stalls)
+  async getOtherIncome() {
+    const res = await fetch(`${API_BASE}/other-income`);
+    if (!res.ok) throw new Error('Failed to fetch other income');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async addOtherIncome(incomeData) {
+    const res = await fetch(`${API_BASE}/other-income`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(incomeData),
+    });
+    if (!res.ok) throw new Error('Failed to add other income');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async deleteOtherIncome(incomeId) {
+    const res = await fetch(`${API_BASE}/other-income/${incomeId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete other income');
+    const json = await res.json();
+    return json;
+  },
+
   // Settings API
   async getSettings() {
     const res = await fetch(`${API_BASE}/settings`);

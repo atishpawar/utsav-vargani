@@ -79,7 +79,7 @@ export default function Dashboard() {
           value={formatINR(totalCollection)}
           icon={IndianRupee}
           color="amber"
-          subtitle="Total paid donations"
+          subtitle="Vargani + Extra Income"
           onClick={() => setActivePage('donations')}
         />
         <StatCard

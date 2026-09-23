@@ -30,6 +30,12 @@ export function AppProvider({ children }) {
     return saved ? JSON.parse(saved) : INITIAL_EXPENSES;
   });
 
+  // Other Income State (Banners, Prizes, Sponsors, Stalls)
+  const [otherIncome, setOtherIncome] = useState(() => {
+    const saved = localStorage.getItem('utsav_other_income');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Settings State
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('utsav_settings');
@@ -63,9 +69,10 @@ export function AppProvider({ children }) {
     let isMounted = true;
     async function syncFromBackend() {
       try {
-        const [remoteReceipts, remoteExpenses, remoteSettings, remoteLogs, remoteReceivers] = await Promise.all([
+        const [remoteReceipts, remoteExpenses, remoteOtherIncome, remoteSettings, remoteLogs, remoteReceivers] = await Promise.all([
           api.getReceipts().catch(() => null),
           api.getExpenses().catch(() => null),
+          api.getOtherIncome().catch(() => null),
           api.getSettings().catch(() => null),
           api.getActivityLogs().catch(() => null),
           api.getReceivers().catch(() => null),
@@ -77,6 +84,9 @@ export function AppProvider({ children }) {
           }
           if (remoteExpenses && Array.isArray(remoteExpenses)) {
             setExpenses(remoteExpenses);
+          }
+          if (remoteOtherIncome && Array.isArray(remoteOtherIncome)) {
+            setOtherIncome(remoteOtherIncome);
           }
           if (remoteSettings && Object.keys(remoteSettings).length > 0) {
             setSettings((prev) => ({
@@ -107,6 +117,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('utsav_expenses', JSON.stringify(expenses));
   }, [expenses]);
+
+  useEffect(() => {
+    localStorage.setItem('utsav_other_income', JSON.stringify(otherIncome));
+  }, [otherIncome]);
 
   useEffect(() => {
     localStorage.setItem('utsav_settings', JSON.stringify(settings));
@@ -296,6 +310,54 @@ export function AppProvider({ children }) {
     });
   };
 
+  // Other Income Actions (Banners, Prizes, Sponsors, Stalls)
+  const addOtherIncome = async (data) => {
+    const nextId = `INC-${String(otherIncome.length + 1).padStart(3, '0')}`;
+    const localIncome = {
+      id: nextId,
+      date: data.date || new Date().toISOString().split('T')[0],
+      category: data.category || 'Advertisement',
+      sourceName: data.sourceName || 'Sponsor',
+      description: data.description || '',
+      amount: Number(data.amount),
+      receivedBy: data.receivedBy || 'Admin',
+      paymentMethod: data.paymentMethod || 'Cash',
+      notes: data.notes || '',
+    };
+
+    try {
+      const savedIncome = await api.addOtherIncome(localIncome);
+      setOtherIncome((prev) => [savedIncome, ...prev]);
+      addToast(`Extra Income entry ${savedIncome.id} added to D1 database!`);
+      refreshActivityLogs();
+      return savedIncome;
+    } catch (err) {
+      console.warn('API error adding other income, using local state:', err);
+      setOtherIncome((prev) => [localIncome, ...prev]);
+      addToast(`Extra Income ${nextId} saved locally!`);
+      return localIncome;
+    }
+  };
+
+  const deleteOtherIncome = (incomeId) => {
+    setConfirmModalData({
+      title: 'Delete Extra Income Record',
+      message: `Are you sure you want to delete income entry ${incomeId}?`,
+      confirmText: 'Delete',
+      type: 'danger',
+      onConfirm: async () => {
+        setOtherIncome((prev) => prev.filter((item) => item.id !== incomeId));
+        addToast(`Income entry ${incomeId} deleted.`, 'info');
+        try {
+          await api.deleteOtherIncome(incomeId);
+          refreshActivityLogs();
+        } catch (err) {
+          console.warn('API sync error deleting other income:', err);
+        }
+      },
+    });
+  };
+
   // Add receiver dynamically to D1 receivers table
   const addReceiver = async (newReceiverName) => {
     const clean = newReceiverName.trim();
@@ -348,13 +410,17 @@ export function AppProvider({ children }) {
   };
 
   // Stats Calculations
-  const totalCollection = receipts
+  const totalDonations = receipts
     .filter((r) => r.status === 'Paid')
     .reduce((sum, r) => sum + r.amount, 0);
 
   const pendingCollection = receipts
     .filter((r) => r.status === 'Pending')
     .reduce((sum, r) => sum + r.amount, 0);
+
+  const totalOtherIncome = otherIncome.reduce((sum, item) => sum + item.amount, 0);
+
+  const totalCollection = totalDonations + totalOtherIncome;
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -371,6 +437,7 @@ export function AppProvider({ children }) {
         setActivePage,
         receipts,
         expenses,
+        otherIncome,
         settings,
         activityLogs,
         refreshActivityLogs,
@@ -380,6 +447,8 @@ export function AppProvider({ children }) {
         deleteReceipt,
         addExpense,
         deleteExpense,
+        addOtherIncome,
+        deleteOtherIncome,
         addReceiver,
         deleteReceiver,
         toasts,
@@ -392,6 +461,8 @@ export function AppProvider({ children }) {
         confirmModalData,
         setConfirmModalData,
         // Calculated Stats
+        totalDonations,
+        totalOtherIncome,
         totalCollection,
         pendingCollection,
         totalExpenses,

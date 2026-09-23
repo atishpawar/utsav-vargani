@@ -470,7 +470,104 @@ app.put('/api/settings', async (c) => {
 });
 
 // ==========================================
-// 6. SUMMARY STATS ENDPOINT
+// 6. OTHER INCOME ENDPOINTS (Banners, Prizes, Sponsors, Stalls)
+// ==========================================
+
+// GET /api/other-income - Fetch all other income records
+app.get('/api/other-income', async (c) => {
+  try {
+    const db = c.env.DB;
+    const { results } = await db.prepare('SELECT * FROM other_income ORDER BY date DESC, created_at DESC').all();
+
+    const otherIncome = results.map(item => ({
+      id: item.id,
+      date: item.date,
+      category: item.category,
+      sourceName: item.source_name,
+      description: item.description,
+      amount: Number(item.amount),
+      receivedBy: item.received_by,
+      paymentMethod: item.payment_method,
+      notes: item.notes || '',
+    }));
+
+    return c.json({ success: true, data: otherIncome });
+  } catch (err) {
+    console.error('Error fetching other income:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// POST /api/other-income - Add new other income entry
+app.post('/api/other-income', async (c) => {
+  try {
+    const db = c.env.DB;
+    const body = await c.req.json();
+
+    const countRes = await db.prepare('SELECT COUNT(*) as count FROM other_income').first();
+    const nextNum = (countRes ? countRes.count : 0) + 1;
+    const id = `INC-${String(nextNum).padStart(3, '0')}`;
+    const date = body.date || new Date().toISOString().split('T')[0];
+
+    await db.prepare(`
+      INSERT INTO other_income (id, date, category, source_name, description, amount, received_by, payment_method, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id,
+      date,
+      body.category || 'Advertisement',
+      body.sourceName || 'Sponsor',
+      body.description || '',
+      Number(body.amount),
+      body.receivedBy || 'Admin',
+      body.paymentMethod || 'Cash',
+      body.notes || ''
+    ).run();
+
+    const newIncome = {
+      id,
+      date,
+      category: body.category || 'Advertisement',
+      sourceName: body.sourceName || 'Sponsor',
+      description: body.description || '',
+      amount: Number(body.amount),
+      receivedBy: body.receivedBy || 'Admin',
+      paymentMethod: body.paymentMethod || 'Cash',
+      notes: body.notes || '',
+    };
+
+    await logActivity(
+      db,
+      body.receivedBy || 'Admin',
+      'Add Extra Income',
+      `Recorded Extra Income ${id} (${body.category}: ₹${body.amount} from ${body.sourceName})`
+    );
+
+    return c.json({ success: true, data: newIncome }, 201);
+  } catch (err) {
+    console.error('Error adding other income:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// DELETE /api/other-income/:id - Delete other income entry
+app.delete('/api/other-income/:id', async (c) => {
+  try {
+    const db = c.env.DB;
+    const id = c.req.param('id');
+
+    await db.prepare('DELETE FROM other_income WHERE id = ?').bind(id).run();
+    await logActivity(db, 'Admin', 'Delete Extra Income', `Deleted Extra Income ${id}`);
+
+    return c.json({ success: true, message: `Income ${id} deleted` });
+  } catch (err) {
+    console.error('Error deleting other income:', err);
+    return c.json({ success: false, error: err.message }, 500);
+  }
+});
+
+// ==========================================
+// 7. SUMMARY STATS ENDPOINT
 // ==========================================
 
 app.get('/api/stats', async (c) => {
@@ -479,16 +576,21 @@ app.get('/api/stats', async (c) => {
 
     const paidRes = await db.prepare("SELECT SUM(amount) as total FROM receipts WHERE status = 'Paid'").first();
     const pendingRes = await db.prepare("SELECT SUM(amount) as total FROM receipts WHERE status = 'Pending'").first();
+    const otherIncRes = await db.prepare("SELECT SUM(amount) as total FROM other_income").first();
     const expenseRes = await db.prepare("SELECT SUM(amount) as total FROM expenses").first();
 
-    const totalCollection = paidRes?.total || 0;
+    const totalDonations = paidRes?.total || 0;
     const pendingCollection = pendingRes?.total || 0;
+    const totalOtherIncome = otherIncRes?.total || 0;
+    const totalCollection = totalDonations + totalOtherIncome;
     const totalExpenses = expenseRes?.total || 0;
     const availableBalance = totalCollection - totalExpenses;
 
     return c.json({
       success: true,
       data: {
+        totalDonations,
+        totalOtherIncome,
         totalCollection,
         pendingCollection,
         totalExpenses,
