@@ -142,9 +142,7 @@ export default function NewReceipt() {
   const validate = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Full Name is required';
-    if (!formData.mobile.trim()) {
-      newErrors.mobile = 'Mobile Number is required';
-    } else if (!/^\d{10}$/.test(formData.mobile.trim())) {
+    if (formData.mobile.trim() && !/^\d{10}$/.test(formData.mobile.trim())) {
       newErrors.mobile = 'Enter valid 10-digit mobile number';
     }
     if (!formData.amount || Number(formData.amount) <= 0) {
@@ -346,7 +344,7 @@ export default function NewReceipt() {
               {/* Mobile Number */}
               <div>
                 <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                  Mobile Number *
+                  Mobile Number (Optional)
                 </label>
                 <input
                   type="tel"
