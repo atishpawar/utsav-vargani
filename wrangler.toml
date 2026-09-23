@@ -1,9 +1,6 @@
 name = "utsav-vargani"
-main = "src/server/index.js"
+pages_build_output_dir = "./dist"
 compatibility_date = "2024-09-23"
-
-# Static assets configuration for Cloudflare Workers
-assets = { directory = "./dist", binding = "ASSETS" }
 
 # Cloudflare D1 Database Binding
 [[d1_databases]]

@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "server": "wrangler dev",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "npm run build && wrangler pages deploy ./dist",
     "d1:migrate:local": "wrangler d1 execute utsav-vargani-db --local --file=./migrations/0001_initial_schema.sql",
     "d1:migrate:remote": "wrangler d1 execute utsav-vargani-db --remote --file=./migrations/0001_initial_schema.sql"
   },
