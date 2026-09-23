@@ -220,54 +220,83 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Section 3: Receipt Settings */}
+        {/* Section 3: Year-Wise Receipt Settings */}
         <div>
           <h3 className="text-xs font-black uppercase tracking-wider text-rose-950 mb-4 pb-2 border-b border-amber-200 flex items-center space-x-2">
             <Receipt className="w-4 h-4 text-amber-600" />
-            <span>Receipt Configuration</span>
+            <span>Year-Wise Receipt Configuration</span>
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div>
-              <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                Receipt Prefix
-              </label>
-              <input
-                type="text"
-                value={formData.receiptPrefix || ''}
-                onChange={(e) => setFormData({ ...formData, receiptPrefix: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
+          <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-200 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
+                  Festival Year
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 2026"
+                  value={formData.year || ''}
+                  onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
+                  Annual Receipt Prefix
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. VR-2026- or VR-"
+                  value={formData.receiptPrefix || ''}
+                  onChange={(e) => setFormData({ ...formData, receiptPrefix: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
+                  Annual Starting Number
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 1001"
+                  value={formData.startingReceiptNo || 1001}
+                  onChange={(e) => setFormData({ ...formData, startingReceiptNo: Number(e.target.value) })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                Starting Receipt Number
-              </label>
-              <input
-                type="number"
-                value={formData.startingReceiptNo || 1001}
-                onChange={(e) => setFormData({ ...formData, startingReceiptNo: Number(e.target.value) })}
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
+            {/* Live Receipt Preview */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white rounded-xl border border-amber-200 text-xs">
+              <span className="font-bold text-stone-700">
+                Preview First Receipt Number for {formData.year || 'Current Year'}:
+              </span>
+              <span className="font-mono font-black text-amber-900 bg-amber-100 px-3 py-1 rounded-lg border border-amber-300 text-sm mt-2 sm:mt-0 inline-block">
+                {(formData.receiptPrefix || 'VR-') + String(formData.startingReceiptNo || 1001).padStart(4, '0')}
+              </span>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                Default Authorized Receiver
-              </label>
-              <select
-                value={formData.defaultReceiver || ''}
-                onChange={(e) => setFormData({ ...formData, defaultReceiver: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="">-- Select Default Receiver --</option>
-                {currentReceivers.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
+                  Default Authorized Receiver
+                </label>
+                <select
+                  value={formData.defaultReceiver || ''}
+                  onChange={(e) => setFormData({ ...formData, defaultReceiver: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="">-- Select Default Receiver --</option>
+                  {currentReceivers.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>

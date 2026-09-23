@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { numberToWordsIndian } from '../data/utils';
+import { numberToWordsIndian, generateNextReceiptNo } from '../data/utils';
 import { api } from '../api/client';
 import {
   Flame,
@@ -18,9 +18,8 @@ import {
 export default function NewReceipt() {
   const { addReceipt, settings, receipts, addReceiver, setPreviewReceipt } = useApp();
 
-  // Next receipt number calculation
-  const nextNum = receipts.length + 1001;
-  const autoReceiptNo = `${settings.receiptPrefix}${String(nextNum).padStart(4, '0')}`;
+  // Year-wise next receipt number calculation
+  const autoReceiptNo = generateNextReceiptNo(receipts, settings);
 
   const [formData, setFormData] = useState({
     receiptNo: autoReceiptNo,
@@ -146,7 +145,8 @@ export default function NewReceipt() {
 
   const handleReset = () => {
     setFormData({
-      receiptNo: `${settings.receiptPrefix}${String(receipts.length + 1002).padStart(4, '0')}`,
+      receiptNo: generateNextReceiptNo(receipts, settings),
+      donorId: null,
       date: new Date().toISOString().split('T')[0],
       name: '',
       mobile: '',
@@ -157,7 +157,7 @@ export default function NewReceipt() {
       status: 'Paid',
       expectedPaymentOption: 'After 2 Days',
       expectedPaymentDate: '',
-      receiver: settings.defaultReceiver || 'Amit',
+      receiver: settings.defaultReceiver || (settings.receivers[0] || 'Admin'),
       notes: '',
     });
     setErrors({});

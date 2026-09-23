@@ -89,3 +89,23 @@ export function formatDate(dateString) {
   const options = { day: '2-digit', month: 'short', year: 'numeric' };
   return new Date(dateString).toLocaleDateString('en-IN', options);
 }
+
+// Year-Wise Receipt Number Generator
+export function generateNextReceiptNo(receipts = [], settings = {}) {
+  const currentYear = settings.year || new Date().getFullYear().toString();
+  const prefix = settings.receiptPrefix || `VR-${currentYear}-`;
+  const startNo = Number(settings.startingReceiptNo) || 1001;
+
+  // Count receipts created for the target festival year or prefix
+  const yearReceipts = receipts.filter(r => {
+    if (!r.receiptNo) return false;
+    return (
+      r.receiptNo.startsWith(prefix) ||
+      (r.date && r.date.startsWith(currentYear)) ||
+      r.receiptNo.includes(currentYear)
+    );
+  });
+
+  const nextSeq = startNo + yearReceipts.length;
+  return `${prefix}${String(nextSeq).padStart(4, '0')}`;
+}

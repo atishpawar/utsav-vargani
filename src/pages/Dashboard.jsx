@@ -28,18 +28,31 @@ export default function Dashboard() {
 
   const recentReceipts = receipts.slice(0, 6);
 
-  // Simple Collection Breakdown Data for Visual Chart
-  const dailyData = [
-    { day: '15 Sep', amount: 13100 },
-    { day: '16 Sep', amount: 5850 },
-    { day: '17 Sep', amount: 4501 },
-    { day: '18 Sep', amount: 15000 },
-    { day: '19 Sep', amount: 4001 },
-    { day: '20 Sep', amount: 5502 },
-    { day: '21 Sep', amount: 3200 },
-  ];
+  // Dynamic Real Collection Data for Last 7 Days
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split('T')[0];
+  });
 
-  const maxAmount = Math.max(...dailyData.map((d) => d.amount));
+  const dailyData = last7Days.map((dateStr) => {
+    const dayTotal = receipts
+      .filter((r) => r.status === 'Paid' && r.date === dateStr)
+      .reduce((sum, r) => sum + r.amount, 0);
+
+    const d = new Date(dateStr);
+    const dayLabel = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+
+    return {
+      day: dayLabel,
+      dateStr,
+      amount: dayTotal,
+    };
+  });
+
+  const maxAmount = Math.max(...dailyData.map((d) => d.amount), 1);
+  const total7DaysAmount = dailyData.reduce((sum, d) => sum + d.amount, 0);
+  const avgDailyAmount = Math.round(total7DaysAmount / 7);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -150,7 +163,7 @@ export default function Dashboard() {
           </div>
 
           <div className="pt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500 font-medium">
-            <span>Average Daily: {formatINR(8100)}</span>
+            <span>Average Daily (Last 7 Days): {formatINR(avgDailyAmount)}</span>
             <button
               onClick={() => setActivePage('reports')}
               className="text-amber-700 font-bold hover:underline"
