@@ -24,8 +24,6 @@ export default function NewReceipt() {
     addReceiver,
     setPreviewReceipt,
     selectedYear: globalSelectedYear,
-    setSelectedYear: setGlobalSelectedYear,
-    availableYears,
   } = useApp();
 
   const activeYear = globalSelectedYear === 'All' ? (settings.year || '2026') : globalSelectedYear;
@@ -63,7 +61,7 @@ export default function NewReceipt() {
   const [errors, setErrors] = useState({});
   const [donorSuggestions, setDonorSuggestions] = useState([]);
 
-  // Sync receipt number and default date when activeYear changes
+  // Sync receipt number and default date when activeYear changes from top navbar
   useEffect(() => {
     const newAutoNo = generateNextReceiptNo(allReceipts || receipts, settings, activeYear);
     setFormData((prev) => ({
@@ -72,11 +70,6 @@ export default function NewReceipt() {
       date: defaultDateForYear(activeYear),
     }));
   }, [activeYear]);
-
-  // Handle year selection change
-  const handleYearChange = (newYear) => {
-    setGlobalSelectedYear(newYear);
-  };
 
   // Fast donor lookup auto-suggest
   const handleDonorSearch = async (query) => {
@@ -251,20 +244,10 @@ export default function NewReceipt() {
           </p>
 
           <div className="mt-4 pt-4 border-t border-white/20 flex flex-wrap items-center justify-between gap-3 text-xs">
-            {/* Festival Year Selection Dropdown */}
-            <div className="flex items-center space-x-2 bg-black/20 px-3 py-1.5 rounded-xl border border-white/30">
-              <span className="font-bold text-amber-300 uppercase tracking-wider text-[10px]">Festival Year:</span>
-              <select
-                value={activeYear}
-                onChange={(e) => handleYearChange(e.target.value)}
-                className="bg-transparent text-white font-black text-xs border-none focus:outline-none cursor-pointer"
-              >
-                {availableYears.map((y) => (
-                  <option key={y} value={y} className="text-stone-900">
-                    {y} {y === (settings.year || '2026') ? '(Current)' : ''}
-                  </option>
-                ))}
-              </select>
+            {/* Active Festival Year Badge */}
+            <div className="flex items-center space-x-1.5 bg-black/20 px-3 py-1.5 rounded-xl border border-white/20 font-bold font-mono">
+              <span className="text-[10px] text-amber-300 uppercase tracking-wider">Festival Year:</span>
+              <span className="text-white font-black text-xs">{activeYear}</span>
             </div>
 
             {/* Editable Receipt No */}
