@@ -83,9 +83,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           const Icon = item.icon;
           const isActive = activePage === item.id;
           return (
-            <button
+            <a
               key={item.id}
-              onClick={() => handleNav(item.id)}
+              href={`/${item.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                handleNav(item.id);
+              }}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all duration-150 group ${
                 isActive
                   ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold shadow-md shadow-amber-600/20'
@@ -107,7 +111,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 <span>{item.label}</span>
               </div>
               {isActive && <ChevronRight className="w-4 h-4 text-amber-200" />}
-            </button>
+            </a>
           );
         })}
       </div>

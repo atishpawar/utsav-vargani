@@ -15,8 +15,71 @@ export function AppProvider({ children }) {
     return { name: 'Admin', username: 'admin', email: 'admin@utsav.com', role: 'Super Admin' };
   });
 
-  // Current active page navigation
-  const [activePage, setActivePage] = useState('dashboard');
+  const getPageFromPath = () => {
+    if (typeof window === 'undefined') return 'dashboard';
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    const validPages = [
+      'dashboard',
+      'new-receipt',
+      'donations',
+      'donors',
+      'pending',
+      'expenses',
+      'income',
+      'reports',
+      'settings',
+    ];
+    if (validPages.includes(path)) {
+      return path;
+    }
+    return 'dashboard';
+  };
+
+  // Current active page navigation with full Browser History & URL route syncing
+  const [activePage, setActivePageState] = useState(() => getPageFromPath());
+
+  const setActivePage = (page, replace = false) => {
+    setActivePageState(page);
+    const targetPath = `/${page}`;
+    if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+      if (replace) {
+        window.history.replaceState({ page }, '', targetPath);
+      } else {
+        window.history.pushState({ page }, '', targetPath);
+      }
+    }
+  };
+
+  // Sync browser back & forward navigation buttons
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handlePopState = () => {
+      const page = getPageFromPath();
+      setActivePageState(page);
+    };
+
+    const currentPath = window.location.pathname.replace(/^\/+|\/+$/g, '');
+    const validPages = [
+      'dashboard',
+      'new-receipt',
+      'donations',
+      'donors',
+      'pending',
+      'expenses',
+      'income',
+      'reports',
+      'settings',
+    ];
+
+    if (!validPages.includes(currentPath)) {
+      const defaultPage = currentPath === '' ? 'dashboard' : getPageFromPath();
+      window.history.replaceState({ page: defaultPage }, '', `/${defaultPage}`);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Receipts / Donations State
   const [receipts, setReceipts] = useState(() => {
