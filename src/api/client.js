@@ -191,6 +191,21 @@ export const api = {
     return json.data;
   },
 
+  // Donors API
+  async getDonors() {
+    const res = await fetch(`${API_BASE}/donors`);
+    if (!res.ok) throw new Error('Failed to fetch donors');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async searchDonors(query) {
+    const res = await fetch(`${API_BASE}/donors/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error('Failed to search donors');
+    const json = await res.json();
+    return json.data;
+  },
+
   // Stats API
   async getStats() {
     const res = await fetch(`${API_BASE}/stats`);

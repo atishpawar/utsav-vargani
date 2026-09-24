@@ -74,42 +74,59 @@ export default function NewReceipt() {
   // Fast donor lookup auto-suggest
   const handleDonorSearch = async (query) => {
     const q = (query || '').trim();
-    if (q.length < 2) {
+    if (!q) {
       setDonorSuggestions([]);
       return;
     }
+
+    let results = [];
     try {
-      const results = await api.searchDonors(q);
-      setDonorSuggestions(results || []);
+      results = await api.searchDonors(q);
     } catch {
-      // Fallback local search from receipts
-      const matches = receipts.filter(
-        (r) =>
-          r.name.toLowerCase().includes(q.toLowerCase()) ||
-          (r.mobile && r.mobile.includes(q))
-      );
-      const unique = [];
-      const seen = new Set();
-      matches.forEach((m) => {
-        if (!seen.has(m.mobile || m.name)) {
-          seen.add(m.mobile || m.name);
-          unique.push(m);
-        }
-      });
-      setDonorSuggestions(unique.slice(0, 5));
+      results = [];
     }
+
+    // Combine remote results with local receipts search across ALL years
+    const localPool = allReceipts && allReceipts.length > 0 ? allReceipts : receipts;
+    const localMatches = localPool.filter(
+      (r) =>
+        (r.name && r.name.toLowerCase().includes(q.toLowerCase())) ||
+        (r.mobile && r.mobile.includes(q))
+    );
+
+    const merged = [...(results || [])];
+    const seenKeys = new Set(merged.map((d) => (d.mobile || d.name || '').toLowerCase()));
+
+    localMatches.forEach((m) => {
+      const key = (m.mobile || m.name || '').toLowerCase();
+      if (key && !seenKeys.has(key)) {
+        seenKeys.add(key);
+        merged.push({
+          id: m.donorId || m.id,
+          name: m.name,
+          mobile: m.mobile,
+          email: m.email,
+          address: m.address,
+        });
+      }
+    });
+
+    setDonorSuggestions(merged.slice(0, 8));
   };
 
   const selectDonorSuggestion = (donor) => {
     setFormData((prev) => ({
       ...prev,
-      donorId: donor.id || null,
+      donorId: donor.id || prev.donorId,
       name: donor.name || prev.name,
       mobile: donor.mobile || prev.mobile,
       email: donor.email || prev.email,
       address: donor.address || prev.address,
     }));
     setDonorSuggestions([]);
+    if (addToast) {
+      addToast(`Selected donor "${donor.name}". Details auto-filled!`, 'success');
+    }
   };
 
   // Auto generate amount in words whenever amount changes
@@ -301,7 +318,7 @@ export default function NewReceipt() {
                     handleDonorSearch(val);
                   }}
                   onFocus={() => {
-                    if (formData.name.trim().length >= 2) handleDonorSearch(formData.name);
+                    if (formData.name.trim().length >= 1) handleDonorSearch(formData.name);
                   }}
                   className={`w-full px-3.5 py-2.5 bg-white border ${
                     errors.name ? 'border-rose-500' : 'border-stone-300'
