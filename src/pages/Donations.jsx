@@ -89,7 +89,7 @@ export default function Donations() {
         <div>
           <h1 className="text-xl font-black text-stone-900 tracking-tight">Donation Records</h1>
           <p className="text-xs text-stone-500">
-            Total {filteredReceipts.length} collections recorded {yearFilter !== 'All' ? `for year ${yearFilter}` : `for ${settings.festivalName}`}
+            Total {filteredReceipts.length} collections recorded {selectedYear !== 'All' ? `for year ${selectedYear}` : `for ${settings.festivalName}`}
           </p>
         </div>
 
@@ -97,7 +97,7 @@ export default function Donations() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-colors flex items-center space-x-1.5 ${
-              showFilters || statusFilter !== 'All' || paymentFilter !== 'All' || yearFilter !== 'All'
+              showFilters || statusFilter !== 'All' || paymentFilter !== 'All' || selectedYear !== 'All'
                 ? 'bg-amber-100 text-amber-900 border-amber-300'
                 : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
             }`}
