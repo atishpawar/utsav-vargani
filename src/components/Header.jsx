@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Menu, Search, Bell, Plus, Flame, CheckCircle2, Clock } from 'lucide-react';
+import { Menu, Search, Bell, Plus, Flame, CheckCircle2, Clock, Calendar } from 'lucide-react';
 
 export default function Header({ onToggleSidebar }) {
-  const { activePage, setActivePage, user, receipts, pendingCollection, setPreviewReceipt } = useApp();
+  const {
+    activePage,
+    setActivePage,
+    user,
+    receipts,
+    pendingCollection,
+    setPreviewReceipt,
+    selectedYear,
+    setSelectedYear,
+    availableYears,
+    settings,
+  } = useApp();
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -52,7 +63,7 @@ export default function Header({ onToggleSidebar }) {
       </div>
 
       {/* Center Search Bar (Desktop) */}
-      <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center relative max-w-xs w-full">
+      <form onSubmit={handleSearchSubmit} className="hidden lg:flex items-center relative max-w-xs w-full">
         <Search className="w-4 h-4 text-stone-400 absolute left-3 pointer-events-none" />
         <input
           type="text"
@@ -63,9 +74,29 @@ export default function Header({ onToggleSidebar }) {
         />
       </form>
 
-      {/* Right side: Quick Action, Notifications, User Avatar */}
-      <div className="flex items-center space-x-2.5">
+      {/* Right side: Global Festival Year Selector, Quick Action, Notifications, User Avatar */}
+      <div className="flex items-center space-x-2 sm:space-x-3">
         
+        {/* GLOBAL FESTIVAL YEAR SELECTOR */}
+        <div className="flex items-center space-x-1.5 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 border border-amber-300/80 px-2.5 sm:px-3 py-1.5 rounded-xl shadow-xs">
+          <Calendar className="w-4 h-4 text-amber-700 flex-shrink-0" />
+          <span className="text-[10px] font-extrabold uppercase text-amber-950 tracking-wider hidden md:inline">
+            Year:
+          </span>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="bg-transparent text-xs font-black text-rose-950 border-none focus:outline-none cursor-pointer pr-1"
+          >
+            <option value="All" className="text-stone-900 font-bold">All Years</option>
+            {availableYears.map((y) => (
+              <option key={y} value={y} className="text-stone-900 font-semibold">
+                Year {y} {y === (settings.year || '2026') ? '(Current)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Quick New Receipt Button */}
         <button
           onClick={() => setActivePage('new-receipt')}

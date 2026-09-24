@@ -3,10 +3,17 @@ import { useApp } from '../context/AppContext';
 import { X, TrendingUp, Calendar, Tag, User, CreditCard, DollarSign, FileText } from 'lucide-react';
 
 export default function OtherIncomeModal({ isOpen, onClose }) {
-  const { settings, addOtherIncome, addToast } = useApp();
+  const { settings, addOtherIncome, addToast, selectedYear } = useApp();
+
+  const getDefaultDate = () => {
+    if (selectedYear && selectedYear !== 'All' && selectedYear !== new Date().getFullYear().toString()) {
+      return `${selectedYear}-09-15`;
+    }
+    return new Date().toISOString().split('T')[0];
+  };
 
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getDefaultDate(),
     category: 'Advertisement',
     sourceName: '',
     description: '',

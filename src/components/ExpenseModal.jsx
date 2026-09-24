@@ -3,10 +3,17 @@ import { useApp } from '../context/AppContext';
 import { X, Receipt, PlusCircle } from 'lucide-react';
 
 export default function ExpenseModal({ isOpen, onClose }) {
-  const { addExpense, settings } = useApp();
+  const { addExpense, settings, selectedYear } = useApp();
+
+  const getDefaultDate = () => {
+    if (selectedYear && selectedYear !== 'All' && selectedYear !== new Date().getFullYear().toString()) {
+      return `${selectedYear}-09-15`;
+    }
+    return new Date().toISOString().split('T')[0];
+  };
 
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getDefaultDate(),
     category: 'Decoration',
     description: '',
     amount: '',

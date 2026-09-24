@@ -24,6 +24,7 @@ export default function Dashboard() {
     setActivePage,
     setPreviewReceipt,
     markAsPaid,
+    selectedYear,
   } = useApp();
 
   const recentReceipts = receipts.slice(0, 6);
@@ -61,7 +62,7 @@ export default function Dashboard() {
       <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-rose-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="relative z-10 max-w-xl">
           <div className="inline-block px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold text-amber-200 mb-2 border border-white/10">
-            Festival Festival Collection 2026
+            {selectedYear !== 'All' ? `Festival Collection ${selectedYear}` : 'All Years Record Overview'}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
             Welcome to Utsav Vargani Portal

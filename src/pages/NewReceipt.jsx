@@ -16,18 +16,34 @@ import {
 } from 'lucide-react';
 
 export default function NewReceipt() {
-  const { addReceipt, settings, receipts, addReceiver, setPreviewReceipt } = useApp();
+  const {
+    addReceipt,
+    settings,
+    receipts,
+    allReceipts,
+    addReceiver,
+    setPreviewReceipt,
+    selectedYear: globalSelectedYear,
+    setSelectedYear: setGlobalSelectedYear,
+    availableYears,
+  } = useApp();
 
-  const currentAppYear = settings.year || new Date().getFullYear().toString();
-  const [selectedYear, setSelectedYear] = useState(currentAppYear);
+  const activeYear = globalSelectedYear === 'All' ? (settings.year || '2026') : globalSelectedYear;
 
   // Year-wise next receipt number calculation
-  const autoReceiptNo = generateNextReceiptNo(receipts, settings, selectedYear);
+  const autoReceiptNo = generateNextReceiptNo(allReceipts || receipts, settings, activeYear);
+
+  const defaultDateForYear = (y) => {
+    if (y === (settings.year || new Date().getFullYear().toString())) {
+      return new Date().toISOString().split('T')[0];
+    }
+    return `${y}-09-15`;
+  };
 
   const [formData, setFormData] = useState({
     receiptNo: autoReceiptNo,
     donorId: null,
-    date: new Date().toISOString().split('T')[0],
+    date: defaultDateForYear(activeYear),
     name: '',
     mobile: '',
     email: '',
@@ -47,24 +63,19 @@ export default function NewReceipt() {
   const [errors, setErrors] = useState({});
   const [donorSuggestions, setDonorSuggestions] = useState([]);
 
-  // Handle year selection change
-  const handleYearChange = (newYear) => {
-    setSelectedYear(newYear);
-    const newAutoNo = generateNextReceiptNo(receipts, settings, newYear);
-    
-    // Adjust date to the target year
-    let newDate = formData.date;
-    if (newYear !== currentAppYear) {
-      newDate = `${newYear}-09-15`; // Default festival date for past year
-    } else {
-      newDate = new Date().toISOString().split('T')[0];
-    }
-
-    setFormData(prev => ({
+  // Sync receipt number and default date when activeYear changes
+  useEffect(() => {
+    const newAutoNo = generateNextReceiptNo(allReceipts || receipts, settings, activeYear);
+    setFormData((prev) => ({
       ...prev,
       receiptNo: newAutoNo,
-      date: newDate,
+      date: defaultDateForYear(activeYear),
     }));
+  }, [activeYear]);
+
+  // Handle year selection change
+  const handleYearChange = (newYear) => {
+    setGlobalSelectedYear(newYear);
   };
 
   // Fast donor lookup auto-suggest
@@ -244,15 +255,15 @@ export default function NewReceipt() {
             <div className="flex items-center space-x-2 bg-black/20 px-3 py-1.5 rounded-xl border border-white/30">
               <span className="font-bold text-amber-300 uppercase tracking-wider text-[10px]">Festival Year:</span>
               <select
-                value={selectedYear}
+                value={activeYear}
                 onChange={(e) => handleYearChange(e.target.value)}
                 className="bg-transparent text-white font-black text-xs border-none focus:outline-none cursor-pointer"
               >
-                <option value="2026" className="text-stone-900">2026 (Current)</option>
-                <option value="2025" className="text-stone-900">2025 (Past Year)</option>
-                <option value="2024" className="text-stone-900">2024 (Past Year)</option>
-                <option value="2023" className="text-stone-900">2023 (Past Year)</option>
-                <option value="2022" className="text-stone-900">2022 (Past Year)</option>
+                {availableYears.map((y) => (
+                  <option key={y} value={y} className="text-stone-900">
+                    {y} {y === (settings.year || '2026') ? '(Current)' : ''}
+                  </option>
+                ))}
               </select>
             </div>
 

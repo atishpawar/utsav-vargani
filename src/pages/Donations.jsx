@@ -18,46 +18,44 @@ import {
 } from 'lucide-react';
 
 export default function Donations() {
-  const { receipts, setActivePage, setPreviewReceipt, markAsPaid, deleteReceipt, settings, addToast } = useApp();
+  const {
+    receipts,
+    allReceipts,
+    setActivePage,
+    setPreviewReceipt,
+    markAsPaid,
+    deleteReceipt,
+    settings,
+    addToast,
+    selectedYear,
+    setSelectedYear,
+    availableYears,
+  } = useApp();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [paymentFilter, setPaymentFilter] = useState('All');
   const [receiverFilter, setReceiverFilter] = useState('All');
-  const [yearFilter, setYearFilter] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   const itemsPerPage = 8;
 
-  // Extract all unique years from receipts for the filter dropdown
-  const availableYears = Array.from(
-    new Set(
-      receipts
-        .map((r) => r.date ? r.date.split('-')[0] : null)
-        .filter(Boolean)
-    )
-  ).sort((a, b) => b - a);
-
-  // Default past years if empty
-  if (availableYears.length === 0) {
-    availableYears.push('2026', '2025', '2024');
-  }
+  const targetReceiptsList = selectedYear === 'All' ? (allReceipts || receipts) : receipts;
 
   // Filter receipts logic
-  const filteredReceipts = receipts.filter((item) => {
+  const filteredReceipts = targetReceiptsList.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.mobile.includes(search) ||
+      (item.mobile && item.mobile.includes(search)) ||
       item.receiptNo.toLowerCase().includes(search.toLowerCase());
 
     const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
     const matchesPayment = paymentFilter === 'All' || item.paymentMethod === paymentFilter;
     const matchesReceiver = receiverFilter === 'All' || item.receiver === receiverFilter;
-    const matchesYear = yearFilter === 'All' || (item.date && item.date.startsWith(yearFilter));
 
-    return matchesSearch && matchesStatus && matchesPayment && matchesReceiver && matchesYear;
+    return matchesSearch && matchesStatus && matchesPayment && matchesReceiver;
   });
 
   // Pagination calculations
@@ -172,8 +170,8 @@ export default function Donations() {
                 Festival Year
               </label>
               <select
-                value={yearFilter}
-                onChange={(e) => setYearFilter(e.target.value)}
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
                 className="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-semibold"
               >
                 <option value="All">All Years</option>

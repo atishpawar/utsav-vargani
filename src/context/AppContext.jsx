@@ -409,20 +409,62 @@ export function AppProvider({ children }) {
     }
   };
 
-  // Stats Calculations
-  const totalDonations = receipts
+  // Global Festival Year state
+  const [selectedYear, setSelectedYearState] = useState(() => {
+    return localStorage.getItem('utsav_selected_year') || '2026';
+  });
+
+  const setSelectedYear = (year) => {
+    setSelectedYearState(year);
+    localStorage.setItem('utsav_selected_year', year);
+  };
+
+  // Dynamically extract available festival years from DB & settings
+  const availableYears = React.useMemo(() => {
+    const yearSet = new Set(['2026', '2025', '2024']);
+    if (settings.year) yearSet.add(String(settings.year));
+    receipts.forEach((r) => {
+      if (r.date) yearSet.add(r.date.split('-')[0]);
+    });
+    expenses.forEach((e) => {
+      if (e.date) yearSet.add(e.date.split('-')[0]);
+    });
+    otherIncome.forEach((i) => {
+      if (i.date) yearSet.add(i.date.split('-')[0]);
+    });
+    return Array.from(yearSet).sort((a, b) => b.localeCompare(a));
+  }, [receipts, expenses, otherIncome, settings.year]);
+
+  // Year-filtered datasets
+  const filteredReceipts = React.useMemo(() => {
+    if (selectedYear === 'All') return receipts;
+    return receipts.filter((r) => r.date && r.date.startsWith(selectedYear));
+  }, [receipts, selectedYear]);
+
+  const filteredExpenses = React.useMemo(() => {
+    if (selectedYear === 'All') return expenses;
+    return expenses.filter((e) => e.date && e.date.startsWith(selectedYear));
+  }, [expenses, selectedYear]);
+
+  const filteredOtherIncome = React.useMemo(() => {
+    if (selectedYear === 'All') return otherIncome;
+    return otherIncome.filter((i) => i.date && i.date.startsWith(selectedYear));
+  }, [otherIncome, selectedYear]);
+
+  // Stats Calculations (Year-Scoped)
+  const totalDonations = filteredReceipts
     .filter((r) => r.status === 'Paid')
-    .reduce((sum, r) => sum + r.amount, 0);
+    .reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
-  const pendingCollection = receipts
+  const pendingCollection = filteredReceipts
     .filter((r) => r.status === 'Pending')
-    .reduce((sum, r) => sum + r.amount, 0);
+    .reduce((sum, r) => sum + Number(r.amount || 0), 0);
 
-  const totalOtherIncome = otherIncome.reduce((sum, item) => sum + item.amount, 0);
+  const totalOtherIncome = filteredOtherIncome.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
   const totalCollection = totalDonations + totalOtherIncome;
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
   const availableBalance = totalCollection - totalExpenses;
 
@@ -435,9 +477,15 @@ export function AppProvider({ children }) {
         logout,
         activePage,
         setActivePage,
-        receipts,
-        expenses,
-        otherIncome,
+        selectedYear,
+        setSelectedYear,
+        availableYears,
+        receipts: filteredReceipts,
+        expenses: filteredExpenses,
+        otherIncome: filteredOtherIncome,
+        allReceipts: receipts,
+        allExpenses: expenses,
+        allOtherIncome: otherIncome,
         settings,
         activityLogs,
         refreshActivityLogs,
