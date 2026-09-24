@@ -1,12 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings as SettingsIcon, Save, QrCode, Building, Receipt, UserCheck, Plus, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon, Save, QrCode, Building, Receipt, UserCheck, Plus, Trash2, Calendar } from 'lucide-react';
 
 export default function Settings() {
-  const { settings, setSettings, addReceiver, deleteReceiver, addToast } = useApp();
+  const {
+    settings,
+    setSettings,
+    addReceiver,
+    deleteReceiver,
+    addToast,
+    selectedYear,
+    setSelectedYear,
+    availableYears,
+  } = useApp();
 
   const [formData, setFormData] = useState({ ...settings });
   const [newReceiverName, setNewReceiverName] = useState('');
+
+  // Active configuration year bound to global selectedYear
+  const configYear = selectedYear === 'All' ? (formData.year || '2026') : selectedYear;
+
+  // Ensure formData has yearConfigs initialized
+  const yearConfigs = formData.yearConfigs || {};
+  const activeYearConfig = yearConfigs[configYear] || {
+    prefix: formData.receiptPrefix ? formData.receiptPrefix.replace(/\d{4}/, configYear) : `VR-${configYear}-`,
+    startingReceiptNo: formData.startingReceiptNo || 1001,
+  };
+
+  const handleYearConfigChange = (field, value) => {
+    const currentYearConfigs = formData.yearConfigs || {};
+    const existing = currentYearConfigs[configYear] || {
+      prefix: formData.receiptPrefix ? formData.receiptPrefix.replace(/\d{4}/, configYear) : `VR-${configYear}-`,
+      startingReceiptNo: formData.startingReceiptNo || 1001,
+    };
+
+    const updatedConfig = {
+      ...existing,
+      [field]: value,
+    };
+
+    const updatedYearConfigs = {
+      ...currentYearConfigs,
+      [configYear]: updatedConfig,
+    };
+
+    setFormData({
+      ...formData,
+      yearConfigs: updatedYearConfigs,
+      ...(configYear === (formData.year || '2026')
+        ? {
+            receiptPrefix: field === 'prefix' ? value : formData.receiptPrefix,
+            startingReceiptNo: field === 'startingReceiptNo' ? Number(value) : formData.startingReceiptNo,
+          }
+        : {}),
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -222,48 +270,67 @@ export default function Settings() {
 
         {/* Section 3: Year-Wise Receipt Settings */}
         <div>
-          <h3 className="text-xs font-black uppercase tracking-wider text-rose-950 mb-4 pb-2 border-b border-amber-200 flex items-center space-x-2">
-            <Receipt className="w-4 h-4 text-amber-600" />
-            <span>Year-Wise Receipt Configuration</span>
-          </h3>
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-amber-200">
+            <h3 className="text-xs font-black uppercase tracking-wider text-rose-950 flex items-center space-x-2">
+              <Receipt className="w-4 h-4 text-amber-600" />
+              <span>Year-Wise Receipt Configuration</span>
+            </h3>
+
+            {/* Configured Year Badge / Switcher */}
+            <div className="flex items-center space-x-1.5 bg-amber-100 border border-amber-300 px-3 py-1 rounded-xl text-xs">
+              <Calendar className="w-3.5 h-3.5 text-amber-800" />
+              <span className="font-bold text-amber-900">Managing Year:</span>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="bg-transparent font-black text-rose-950 border-none focus:outline-none cursor-pointer"
+              >
+                <option value="All">Current ({formData.year || '2026'})</option>
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>
+                    Year {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-200 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
                 <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                  Festival Year
+                  Target Festival Year
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. 2026"
-                  value={formData.year || ''}
-                  onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  value={configYear}
+                  disabled
+                  className="w-full px-3.5 py-2.5 bg-stone-100 border border-stone-300 rounded-xl text-sm font-black text-stone-700"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                  Annual Receipt Prefix
+                  Receipt Prefix for Year {configYear}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. VR-2026- or VR-"
-                  value={formData.receiptPrefix || ''}
-                  onChange={(e) => setFormData({ ...formData, receiptPrefix: e.target.value })}
+                  placeholder={`e.g. VR-${configYear}-`}
+                  value={activeYearConfig.prefix || ''}
+                  onChange={(e) => handleYearConfigChange('prefix', e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-stone-700 uppercase mb-1">
-                  Annual Starting Number
+                  Starting Number for Year {configYear}
                 </label>
                 <input
                   type="number"
                   placeholder="e.g. 1001"
-                  value={formData.startingReceiptNo || 1001}
-                  onChange={(e) => setFormData({ ...formData, startingReceiptNo: Number(e.target.value) })}
+                  value={activeYearConfig.startingReceiptNo || 1001}
+                  onChange={(e) => handleYearConfigChange('startingReceiptNo', Number(e.target.value))}
                   className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
@@ -272,10 +339,10 @@ export default function Settings() {
             {/* Live Receipt Preview */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-white rounded-xl border border-amber-200 text-xs">
               <span className="font-bold text-stone-700">
-                Preview First Receipt Number for {formData.year || 'Current Year'}:
+                Preview First Generated Receipt Number for Year {configYear}:
               </span>
               <span className="font-mono font-black text-amber-900 bg-amber-100 px-3 py-1 rounded-lg border border-amber-300 text-sm mt-2 sm:mt-0 inline-block">
-                {(formData.receiptPrefix || 'VR-') + String(formData.startingReceiptNo || 1001).padStart(4, '0')}
+                {(activeYearConfig.prefix || `VR-${configYear}-`) + String(activeYearConfig.startingReceiptNo || 1001).padStart(4, '0')}
               </span>
             </div>
 
